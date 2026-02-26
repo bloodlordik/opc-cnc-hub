@@ -1,0 +1,59 @@
+opc:
+  port: 4840
+  endpoint: 'opc.tcp://localhost:4840'
+  security:
+    policy: 'None'
+    mode: 'None'
+  server:
+    applicationName: 'OPC CNC Hub'
+    applicationUri: 'urn:opc-cnc-hub:server'
+    productName: 'OPC CNC Hub'
+    productUri: 'urn:opc-cnc-hub:product'
+mqtt:
+  broker: 'mqtt://localhost:1883'
+  clientId: 'opc-cnc-hub'
+  username: null
+  password: null
+  qos: 0
+  reconnectPeriod: 5000
+  connectTimeout: 10000
+  clean: true
+eventBuffer:
+  maxSize: 10000
+  overflowPolicy: 'DROP_OLDEST'
+  retryAttempts: 3
+  retryDelay: 1000
+  maxAge: 30000
+database:
+  host: 'localhost'
+  port: 5432
+  database: 'opc_cnc_hub'
+  username: 'postgres'
+  password: 'postgres'
+  ssl: false
+opcProjection:
+  batchSize: 100
+  batchInterval: 50
+  changeDetection: true
+security:
+  jwt:
+    secret: 'your-secret-key-change-in-production'
+    expiresIn: '24h'
+    refreshTokenExpiresIn: '7d'
+  apiKeys:
+    enabled: true
+  rateLimiting:
+    enabled: true
+    windowMs: 60000
+    maxRequests: 100
+monitoring:
+  metrics:
+    enabled: true
+logging:
+  level: 'INFO'
+  transports:
+    - type: 'console'
+    - type: 'file'
+      filename: 'logs/combined.log'
+      maxsize: 10485760
+      maxFiles: 5

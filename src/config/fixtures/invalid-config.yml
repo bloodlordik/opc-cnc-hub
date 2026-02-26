@@ -1,0 +1,26 @@
+opc:
+  port: 'invalid-port'
+  endpoint: 'not-a-url'
+  security:
+    policy: 'InvalidPolicy'
+    mode: 'None'
+  server:
+    applicationName: 'OPC CNC Hub'
+    applicationUri: 'urn:opc-cnc-hub:server'
+    productName: 'OPC CNC Hub'
+    productUri: 'urn:opc-cnc-hub:product'
+mqtt:
+  broker: 'mqtt://localhost:1883'
+  clientId: 'opc-cnc-hub'
+  username: null
+  password: null
+  qos: 5
+  reconnectPeriod: 5000
+  connectTimeout: 10000
+  clean: true
+eventBuffer:
+  maxSize: -100
+  overflowPolicy: 'INVALID_POLICY'
+  retryAttempts: 3
+  retryDelay: 1000
+  maxAge: 30000
