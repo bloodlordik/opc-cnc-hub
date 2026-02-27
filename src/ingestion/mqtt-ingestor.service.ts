@@ -11,6 +11,7 @@ import { IngestionSchemaRegistry } from './schema-registry.service';
 import { CanonicalEventFactory } from './canonical-event-factory.service';
 import type { IEventBufferService } from './event-buffer.interface';
 import type { ReconnectionStrategy, QoS } from './ingestion.types';
+import { ConfigService } from 'src/config/config.service';
 
 @Injectable()
 export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
@@ -24,6 +25,7 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
     private readonly reconnectionStrategy: ExponentialBackoffReconnectionStrategy,
     private readonly schemaRegistry: IngestionSchemaRegistry,
     private readonly canonicalEventFactory: CanonicalEventFactory,
+    private readonly config: ConfigService
    // private readonly eventBufferService?: IEventBufferService,
   ) {}
 
@@ -164,8 +166,8 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
     const stats = this.mqttClientService.getStatistics();
     return {
       status: this.connectionStatus,
-      brokerUrl: 'unknown',
-      clientId: 'unknown',
+      brokerUrl: this.config.getConfig().mqtt.broker,
+      clientId: this.config.getConfig().mqtt.clientId,
       connectedAt: stats.isConnected ? new Date() : undefined,
       lastError:
         this.connectionStatus === ConnectionStatus.FAILED
