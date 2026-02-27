@@ -13,10 +13,10 @@ opc:
 
 # MQTT Configuration
 mqtt:
-  broker: 'mqtt://localhost:1883'
+  broker: 'mqtt://10.0.5.21:1883'
   clientId: 'opc-cnc-hub'
-  username: null
-  password: null
+  username: roman
+  password: 12345678u
   qos: 0
   reconnectPeriod: 5000
   connectTimeout: 10000
