@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn, VersionColumn } from 'typeorm';
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn, VersionColumn } from 'typeorm';
 import { Machine } from './machine.entity';
 
 @Entity('machine_type')
@@ -17,6 +17,6 @@ export class MachineType {
     deletedAt: Date | null;
     @VersionColumn()
     version: number;
-    @ManyToOne(() => Machine, (machine) => machine.messageSchema)
+    @OneToMany(() => Machine, (machine) => machine.machineType)
     machines: Machine[];
 }

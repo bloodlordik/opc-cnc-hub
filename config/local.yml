@@ -41,6 +41,8 @@ database:
   username: 'postgres'
   password: 'postgres'
   ssl: false
+  synchronize: false
+  autoLoadEntities: true
 
 # OPC Projection Configuration
 opcProjection:

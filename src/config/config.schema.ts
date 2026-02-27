@@ -73,6 +73,8 @@ const DatabaseSchema = z.object({
   username: z.string(),
   password: z.string(),
   ssl: z.boolean(),
+  synchronize: z.boolean().optional().default(false),
+  autoLoadEntities: z.boolean().optional().default(true),
 });
 
 const OpcProjectionSchema = z.object({
