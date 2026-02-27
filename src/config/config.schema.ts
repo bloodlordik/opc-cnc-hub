@@ -38,13 +38,13 @@ const OpcServerSchema = z.object({
 
 const OpcSchema = z.object({
   port: z.number(),
-  endpoint: z.string().url(),
+  endpoint: z.url(),
   security: OpcSecuritySchema,
   server: OpcServerSchema,
 });
 
 const MqttSchema = z.object({
-  broker: z.string().url(),
+  broker: z.url(),
   clientId: z.string(),
   username: z.string().nullable(),
   password: z.string().nullable(),
@@ -52,6 +52,10 @@ const MqttSchema = z.object({
   reconnectPeriod: z.number().int(),
   connectTimeout: z.number().int(),
   clean: z.boolean(),
+  retryDelay: z.number().int().positive(),
+  retryAttempts: z.number().int().positive(),
+  maxDelay: z.number().int().positive(),
+  backoffMultiplier: z.number().int().positive(),
 });
 
 const EventBufferSchema = z.object({

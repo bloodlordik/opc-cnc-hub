@@ -9,8 +9,7 @@ import { MqttClientService } from './mqtt-client.service';
 import { ExponentialBackoffReconnectionStrategy } from './exponential-backoff-reconnection-strategy.service';
 import { IngestionSchemaRegistry } from './schema-registry.service';
 import { CanonicalEventFactory } from './canonical-event-factory.service';
-import type { IEventBufferService } from './event-buffer.interface';
-import type { ReconnectionStrategy, QoS } from './ingestion.types';
+import type {  QoS } from './ingestion.types';
 import { ConfigService } from 'src/config/config.service';
 
 @Injectable()
@@ -26,7 +25,6 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
     private readonly schemaRegistry: IngestionSchemaRegistry,
     private readonly canonicalEventFactory: CanonicalEventFactory,
     private readonly config: ConfigService
-   // private readonly eventBufferService?: IEventBufferService,
   ) {}
 
   async onModuleInit(): Promise<void> {

@@ -1,11 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ReconnectionStrategy } from './ingestion.types';
-import { Optional, Inject } from '@nestjs/common';
+import { ConfigService } from 'src/config/config.service';
 
-export const DEFAULT_RECONNECT_ATTEMPTS = 10;
-export const DEFAULT_INITIAL_DELAY = 1000;
-export const DEFAULT_MAX_DELAY = 30000;
-export const DEFAULT_BACKOFF_MULTIPLIER = 2;
 
 @Injectable()
 export class ExponentialBackoffReconnectionStrategy implements ReconnectionStrategy {
@@ -14,27 +10,16 @@ export class ExponentialBackoffReconnectionStrategy implements ReconnectionStrat
   );
 
   constructor(
-    @Optional()
-    @Inject('mqtt.reconnect.maxAttempts')
-    readonly maxAttempts: number = DEFAULT_RECONNECT_ATTEMPTS,
-    @Optional()
-    @Inject('mqtt.reconnect.initialDelay')
-    readonly initialDelay: number = DEFAULT_INITIAL_DELAY,
-    @Optional()
-    @Inject('mqtt.reconnect.maxDelay')
-    readonly maxDelay: number = DEFAULT_MAX_DELAY,
-    @Optional()
-    @Inject('mqtt.reconnect.backoffMultiplier')
-    readonly backoffMultiplier: number = DEFAULT_BACKOFF_MULTIPLIER,
+      private readonly configService: ConfigService,
   ) {}
 
   shouldReconnect(attempt: number): boolean {
-    return attempt < this.maxAttempts;
+    return attempt < this.configService.getConfig().mqtt.retryAttempts;
   }
 
   getDelay(attempt: number): number {
-    const delay = this.initialDelay * Math.pow(this.backoffMultiplier, attempt);
-    return Math.min(delay, this.maxDelay);
+    const delay = this.configService.getConfig().mqtt.retryDelay * Math.pow(this.configService.getConfig().mqtt.backoffMultiplier, attempt);
+    return Math.min(delay, this.configService.getConfig().mqtt.maxDelay);
   }
 
   onConnect(): void {

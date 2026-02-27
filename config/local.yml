@@ -21,7 +21,10 @@ mqtt:
   reconnectPeriod: 5000
   connectTimeout: 10000
   clean: true
-
+  retryDelay: 1000
+  retryAttempts: 10
+  maxDelay: 30000
+  backoffMultiplier: 2
 # Event Buffer Configuration (In-Memory Only)
 eventBuffer:
   maxSize: 10000
