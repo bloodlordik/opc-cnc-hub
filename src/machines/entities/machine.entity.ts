@@ -9,6 +9,8 @@ export class Machine {
     id: number;
     @Column('text')
     name: string;
+    @Column('integer')
+    alias: number;
     @Column('text', {nullable: true})
     description: string | null;
     @UpdateDateColumn()
