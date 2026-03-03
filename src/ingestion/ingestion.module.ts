@@ -1,34 +1,11 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '../config/config.module';
-import { MqttClientService } from './mqtt-client.service';
-
-import { IngestionSchemaRegistry } from './schema-registry.service';
-import { CanonicalEventFactory } from './canonical-event-factory.service';
-import { MqttIngestorService } from './mqtt-ingestor.service';
 import { ApiIngestorService } from './api-ingestor.service';
 import { IngestionController } from './ingestion.controller';
-import { ExponentialBackoffReconnectionStrategy } from './exponential-backoff-reconnection-strategy.service';
-import { MessageSchemaRegistryService } from './message-schema-registry.service';
+import { IngestionSchemaRegistry } from './schema-registry.service';
 
 @Module({
-  imports: [ConfigModule],
   controllers: [IngestionController],
-  providers: [
-    MqttClientService,
-    ExponentialBackoffReconnectionStrategy,
-    IngestionSchemaRegistry,
-    CanonicalEventFactory,
-    MqttIngestorService,
-    ApiIngestorService,
-    MessageSchemaRegistryService,
-  ],
-  exports: [
-    MqttClientService,
-    IngestionSchemaRegistry,
-    CanonicalEventFactory,
-    MqttIngestorService,
-    ApiIngestorService,
-    MessageSchemaRegistryService,
-  ],
+  providers: [ApiIngestorService, IngestionSchemaRegistry],
+  exports: [ApiIngestorService, IngestionSchemaRegistry],
 })
 export class IngestionModule {}

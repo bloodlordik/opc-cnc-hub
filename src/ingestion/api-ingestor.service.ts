@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CanonicalEventFactory } from './canonical-event-factory.service';
-import { CanonicalEvent } from './ingestion.types';
+import { CanonicalEvent } from '../mqtt';
 
 export interface IngestRequest {
   source: string;
@@ -28,14 +27,10 @@ export class ApiIngestorService {
   private readonly logger = new Logger(ApiIngestorService.name);
   private readonly MAX_PAYLOAD_SIZE = 1 * 1024 * 1024; // 1MB
 
-  constructor(
-    private readonly canonicalEventFactory: CanonicalEventFactory,
-  ) {}
+  constructor() {}
 
   async ingest(request: IngestRequest): Promise<IngestResponse> {
-    this.logger.debug(
-      `Processing ingest request from source ${request.source}`,
-    );
+    this.logger.debug(`Processing ingest request from source ${request.source}`);
 
     try {
       const payloadSize = JSON.stringify(request.payload).length;
@@ -44,7 +39,7 @@ export class ApiIngestorService {
       }
 
       const event: CanonicalEvent = {
-        eventId: this.canonicalEventFactory.generateEventId(),
+        eventId: this.generateEventId(),
         source: 'api',
         topic: request.topic,
         payload: request.payload,
@@ -54,8 +49,6 @@ export class ApiIngestorService {
           receivedAt: new Date().toISOString(),
         },
       };
-
-      
 
       return {
         eventId: event.eventId,
@@ -95,5 +88,10 @@ export class ApiIngestorService {
       successCount,
       errorCount,
     };
+  }
+
+  private generateEventId(): string {
+    const { randomUUID } = require('node:crypto');
+    return randomUUID();
   }
 }

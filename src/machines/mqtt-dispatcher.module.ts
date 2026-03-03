@@ -1,18 +1,18 @@
 import { Module } from '@nestjs/common';
 import { MqttDispatcherService } from './mqtt-dispatcher.service';
 import { MachinesModule } from './machines.module';
-import { IngestionModule } from '../ingestion/ingestion.module';
+import { MqttModule } from '../mqtt/mqtt.module';
 
 /**
  * Модуль диспетчеризации MQTT сообщений
- * 
+ *
  * Автоматически подписывается на MQTT топики станков при старте приложения
  * на основе конфигурации из базы данных
  */
 @Module({
   imports: [
     MachinesModule,
-    IngestionModule,
+    MqttModule,
   ],
   providers: [MqttDispatcherService],
   exports: [MqttDispatcherService],

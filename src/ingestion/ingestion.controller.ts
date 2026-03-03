@@ -7,7 +7,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { MqttIngestorService } from './mqtt-ingestor.service';
+import { MqttIngestorService, MqttClientService } from '../mqtt';
 import { IngestionSchemaRegistry } from './schema-registry.service';
 import { ApiIngestorService } from './api-ingestor.service';
 import {
@@ -18,7 +18,6 @@ import {
   BatchIngestDto,
 } from './dto/ingestion.dto';
 import { z } from 'zod';
-import type { IMqttClientService } from './ingestion.types';
 
 @Controller('api/v2/ingestion')
 export class IngestionController {
@@ -26,6 +25,7 @@ export class IngestionController {
     private readonly mqttIngestorService: MqttIngestorService,
     private readonly schemaRegistry: IngestionSchemaRegistry,
     private readonly apiIngestorService: ApiIngestorService,
+    private readonly mqttClientService: MqttClientService,
   ) {}
 
   @Get('status')
@@ -49,13 +49,7 @@ export class IngestionController {
 
   @Get('subscriptions')
   getSubscriptions() {
-    const mqttClient = this.mqttIngestorService as any;
-    if (!mqttClient || !mqttClient.mqttClientService) {
-      return { subscriptions: [] };
-    }
-    const stats = (
-      mqttClient.mqttClientService as IMqttClientService
-    ).getStatistics();
+    const stats = this.mqttClientService.getStatistics();
     return { subscriptions: stats.subscriptions };
   }
 

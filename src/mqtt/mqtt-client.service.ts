@@ -1,14 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as mqtt from 'mqtt';
-import {
-  IMqttClientService,
-  MqttStatistics,
-  QoS,
-  Subscription,
-} from './ingestion.types';
+import { IMqttClientService, MqttStatistics, QoS, Subscription } from './mqtt.types';
 import { ConfigService } from '../config/config.service';
 
-export type MessageCallback = (topic: string, payload: Buffer) => void
+export type MessageCallback = (topic: string, payload: Buffer) => void;
 
 @Injectable()
 export class MqttClientService implements IMqttClientService {
@@ -56,7 +51,7 @@ export class MqttClientService implements IMqttClientService {
         if (this.messageCallbacks.length > 0) {
           for (const callback of this.messageCallbacks) {
             callback(topic, payload);
-          }         
+          }
         }
       });
 
@@ -107,9 +102,7 @@ export class MqttClientService implements IMqttClientService {
         } else {
           const grantedQos = granted?.[0]?.qos;
           const subscriptionQos: QoS =
-            grantedQos === 0 || grantedQos === 1 || grantedQos === 2
-              ? grantedQos
-              : qos;
+            grantedQos === 0 || grantedQos === 1 || grantedQos === 2 ? grantedQos : qos;
           const subscription: Subscription = {
             topic,
             qos: subscriptionQos,

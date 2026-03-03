@@ -1,5 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SchemaRegistry, MessageSchema } from './ingestion.types';
+import { z } from 'zod';
+
+export interface MessageSchema {
+  topic: string;
+  schema: z.ZodSchema;
+  version?: string;
+  description?: string;
+}
+
+export interface SchemaRegistry {
+  register(schema: MessageSchema): void;
+  unregister(topic: string): void;
+  get(topic: string): MessageSchema | undefined;
+  list(): MessageSchema[];
+  has(topic: string): boolean;
+}
 
 @Injectable()
 export class IngestionSchemaRegistry implements SchemaRegistry {

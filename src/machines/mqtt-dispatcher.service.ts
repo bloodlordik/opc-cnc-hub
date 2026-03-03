@@ -1,7 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { MessageSchemaRegistryService } from '../ingestion/message-schema-registry.service';
-import { MqttIngestorService } from '../ingestion/mqtt-ingestor.service';
-import { MachinesService } from '../machines/machines.service';
+import { MessageSchemaRegistryService, MqttIngestorService } from '../mqtt';
+import { MachinesService } from './machines.service';
 import { CncSchemaMapper, SchemaMapper } from './schema-mapper';
 import { Machine } from './entities/machine.entity';
 
@@ -18,7 +17,7 @@ interface TopicSubscription {
 
 /**
  * Сервис диспетчеризации MQTT сообщений на основе конфигурации станков
- * 
+ *
  * Автоматически подписывается на топики станков при старте приложения
  * и регистрирует соответствующие схемы валидации
  */
@@ -47,7 +46,7 @@ export class MqttDispatcherService implements OnModuleInit {
   private async subscribeToAllMachines(): Promise<void> {
     try {
       const machines = await this.machinesService.findAllMachines();
-      
+
       if (machines.length === 0) {
         this.logger.log('No machines found in database, skipping MQTT subscriptions');
         return;
@@ -83,12 +82,12 @@ export class MqttDispatcherService implements OnModuleInit {
     }
 
     const schemaName = machine.messageSchema.name;
-    
+
     // Проверяем, есть ли у нас маппер для этой схемы
     if (!this.schemaMapper.hasSchema(schemaName)) {
       this.logger.warn(
         `No schema mapper found for "${schemaName}" (machine: ${machine.name}). ` +
-        `Available schemas: ${this.schemaMapper.getRegisteredSchemas().join(', ')}`,
+          `Available schemas: ${this.schemaMapper.getRegisteredSchemas().join(', ')}`,
       );
       return;
     }
@@ -112,7 +111,7 @@ export class MqttDispatcherService implements OnModuleInit {
     // Подписываемся на топик
     try {
       await this.mqttIngestorService.subscribe(topic, 1);
-      
+
       // Сохраняем информацию о подписке
       this.subscriptions.set(topic, {
         topic,
@@ -124,14 +123,14 @@ export class MqttDispatcherService implements OnModuleInit {
 
       this.logger.log(
         `Subscribed to topic "${topic}" for machine "${machine.name}" ` +
-        `with schema "${schemaName}"`,
+          `with schema "${schemaName}"`,
       );
     } catch (error) {
       this.logger.error(
         `Failed to subscribe to topic "${topic}" for machine "${machine.name}"`,
         error,
       );
-      
+
       this.subscriptions.set(topic, {
         topic,
         machineId: machine.id,
@@ -146,8 +145,8 @@ export class MqttDispatcherService implements OnModuleInit {
    * Логирование итогов подписки
    */
   private logSubscriptionSummary(): void {
-    const subscribed = Array.from(this.subscriptions.values()).filter(s => s.subscribed);
-    const failed = Array.from(this.subscriptions.values()).filter(s => !s.subscribed);
+    const subscribed = Array.from(this.subscriptions.values()).filter((s) => s.subscribed);
+    const failed = Array.from(this.subscriptions.values()).filter((s) => !s.subscribed);
 
     this.logger.log(`MQTT subscription summary:`);
     this.logger.log(`  - Successfully subscribed: ${subscribed.length}`);
@@ -165,9 +164,7 @@ export class MqttDispatcherService implements OnModuleInit {
     if (failed.length > 0) {
       this.logger.warn('  Failed subscriptions:');
       for (const sub of failed) {
-        this.logger.warn(
-          `    - ${sub.topic} (machine: ${sub.machineName})`,
-        );
+        this.logger.warn(`    - ${sub.topic} (machine: ${sub.machineName})`);
       }
     }
   }
@@ -201,7 +198,7 @@ export class MqttDispatcherService implements OnModuleInit {
    */
   async subscribeToMachineById(machineId: number): Promise<void> {
     const machine = await this.machinesService.findOneMachine(machineId);
-    
+
     if (!machine) {
       throw new Error(`Machine with ID ${machineId} not found`);
     }
@@ -214,7 +211,7 @@ export class MqttDispatcherService implements OnModuleInit {
    */
   async unsubscribeFromMachine(machineId: number): Promise<void> {
     const subscription = Array.from(this.subscriptions.values()).find(
-      s => s.machineId === machineId,
+      (s) => s.machineId === machineId,
     );
 
     if (!subscription) {
@@ -226,8 +223,10 @@ export class MqttDispatcherService implements OnModuleInit {
       await this.mqttIngestorService.unsubscribe(subscription.topic);
       this.subscriptions.delete(subscription.topic);
       this.schemaRegistry.unregister(subscription.topic);
-      
-      this.logger.log(`Unsubscribed from machine "${subscription.machineName}" (topic: ${subscription.topic})`);
+
+      this.logger.log(
+        `Unsubscribed from machine "${subscription.machineName}" (topic: ${subscription.topic})`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to unsubscribe from machine "${subscription.machineName}"`,

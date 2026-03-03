@@ -10,7 +10,8 @@ import {
   ArrayMinSize,
   ArrayMaxSize,
 } from 'class-validator';
-import type { QoS } from '../ingestion.types';
+
+export type QoS = 0 | 1 | 2;
 
 export class SubscribeDto {
   @IsString()

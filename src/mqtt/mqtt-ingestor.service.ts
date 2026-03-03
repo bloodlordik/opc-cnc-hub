@@ -6,13 +6,12 @@ import {
   OnApplicationShutdown,
 } from '@nestjs/common';
 import { Subject, Observable, filter, share } from 'rxjs';
-import { ConnectionStatus, CanonicalEvent } from './ingestion.types';
+import { ConnectionStatus, CanonicalEvent } from './mqtt.types';
 import { MqttClientService } from './mqtt-client.service';
 import { ExponentialBackoffReconnectionStrategy } from './exponential-backoff-reconnection-strategy.service';
 import { CanonicalEventFactory } from './canonical-event-factory.service';
-import type { QoS } from './ingestion.types';
-import { ConfigService } from 'src/config/config.service';
-import { MessageSchemaRegistryService } from './message-schema-registry.service';
+import type { QoS } from './mqtt.types';
+import { ConfigService } from '../config/config.service';
 
 @Injectable()
 export class MqttIngestorService
@@ -28,7 +27,6 @@ export class MqttIngestorService
   constructor(
     private readonly mqttClientService: MqttClientService,
     private readonly reconnectionStrategy: ExponentialBackoffReconnectionStrategy,
-    private readonly schemaRegistry: MessageSchemaRegistryService,
     private readonly canonicalEventFactory: CanonicalEventFactory,
     private readonly config: ConfigService,
   ) {
@@ -91,13 +89,8 @@ export class MqttIngestorService
   }
 
   private scheduleReconnection(error?: Error): void {
-    if (
-      !this.reconnectionStrategy.shouldReconnect(this.reconnectionAttempt)
-    ) {
-      this.logger.error(
-        'Max reconnection attempts reached. Connection failed.',
-        error,
-      );
+    if (!this.reconnectionStrategy.shouldReconnect(this.reconnectionAttempt)) {
+      this.logger.error('Max reconnection attempts reached. Connection failed.', error);
       this.connectionStatus = ConnectionStatus.FAILED;
       return;
     }
@@ -125,11 +118,7 @@ export class MqttIngestorService
     }, delay);
   }
 
-  async subscribe(
-    topic: string,
-    qos: QoS = 0,
-    schema?: string,
-  ): Promise<void> {
+  async subscribe(topic: string, qos: QoS = 0): Promise<void> {
     try {
       await this.mqttClientService.subscribe(topic, qos);
       this.logger.log(`Subscribed to topic ${topic} with QoS ${qos}`);
@@ -152,46 +141,18 @@ export class MqttIngestorService
   private setupMessageHandler(): void {
     this.mqttClientService.onMessage(async (topic, payload) => {
       try {
-        const event = this.canonicalEventFactory.createFromMqtt(
-          topic,
-          payload,
-        );
-
+        const event = this.canonicalEventFactory.createFromMqtt(topic, payload);
         this.messageSubject.next(event);
       } catch (error) {
-        this.logger.error(
-          `Failed to process message from topic ${topic}`,
-          error,
-        );
+        this.logger.error(`Failed to process message from topic ${topic}`, error);
       }
     });
   }
 
-  /**
-   * Возвращает реактивный поток всех MQTT сообщений в виде CanonicalEvent
-   * Другие сервисы могут подписываться на этот поток для обработки сообщений
-   *
-   * @example
-   * // В другом сервисе:
-   * constructor(private mqttIngestor: MqttIngestorService) {
-   *   this.mqttIngestor.getMessageStream()
-   *     .pipe(filter(event => event.topic?.startsWith('cnc/')))
-   *     .subscribe(event => this.handleCncEvent(event));
-   * }
-   */
   getMessageStream(): Observable<CanonicalEvent> {
     return this.messageObservable;
   }
 
-  /**
-   * Возвращает отфильтрованный поток сообщений по указанному топику (поддерживает wildcard)
-   *
-   * @param topicPattern - Шаблон топика (например, 'cnc/+/status' или 'cnc/device1/#')
-   * @example
-   * // Подписка на все статусы CNC устройств:
-   * mqttIngestor.getMessageStreamByTopic('cnc/+/status')
-   *   .subscribe(event => console.log('CNC Status:', event.payload));
-   */
   getMessageStreamByTopic(topicPattern: string): Observable<CanonicalEvent> {
     const regexPattern = topicPattern
       .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
