@@ -145,7 +145,6 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
           payload,
           schema,
         );
-
        
       } catch (error) {
         this.logger.error(

@@ -36,11 +36,28 @@ const OpcServerSchema = z.object({
   productUri: z.string(),
 });
 
+const OpcServerOptionsSchema = z.object({
+  resourcePath: z.string().optional().default('/opc/cnc-hub'),
+  alternateHostname: z.string().optional(),
+  maxConnections: z.number().int().positive().optional().default(100),
+  maxSessionCount: z.number().int().positive().optional().default(100),
+  maxSubscriptionsCount: z.number().int().positive().optional().default(100),
+  maxNodesPerRead: z.number().int().positive().optional().default(100),
+  maxNodesPerWrite: z.number().int().positive().optional().default(100),
+  maxNodesPerMethodCall: z.number().int().positive().optional().default(100),
+  maxNodesPerBrowse: z.number().int().positive().optional().default(100),
+  maxNodesPerRegisterNodes: z.number().int().positive().optional().default(100),
+  maxNodesPerHistoryRead: z.number().int().positive().optional().default(100),
+  maxNodesPerHistoryUpdate: z.number().int().positive().optional().default(100),
+  maxNodesPerTranslateBrowsePathsToNodeIds: z.number().int().positive().optional().default(100),
+});
+
 const OpcSchema = z.object({
   port: z.number(),
   endpoint: z.url(),
   security: OpcSecuritySchema,
   server: OpcServerSchema,
+  options: OpcServerOptionsSchema.optional(),
 });
 
 const MqttSchema = z.object({

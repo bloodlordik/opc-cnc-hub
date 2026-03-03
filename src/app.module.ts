@@ -4,12 +4,14 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { MachinesModule } from './machines/machines.module';
+import { OpcServerModule } from './opc-server/opc-server.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from './config/config.service';
 
 @Module({
   imports: [
     ConfigModule,
+    OpcServerModule,
     IngestionModule,
     MachinesModule,
     TypeOrmModule.forRootAsync({
