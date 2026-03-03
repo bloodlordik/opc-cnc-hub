@@ -3,29 +3,37 @@ import {
   Logger,
   OnModuleInit,
   OnModuleDestroy,
+  OnApplicationShutdown,
 } from '@nestjs/common';
-import { ConnectionStatus } from './ingestion.types';
+import { Subject, Observable, filter, share } from 'rxjs';
+import { ConnectionStatus, CanonicalEvent } from './ingestion.types';
 import { MqttClientService } from './mqtt-client.service';
 import { ExponentialBackoffReconnectionStrategy } from './exponential-backoff-reconnection-strategy.service';
 import { IngestionSchemaRegistry } from './schema-registry.service';
 import { CanonicalEventFactory } from './canonical-event-factory.service';
-import type {  QoS } from './ingestion.types';
+import type { QoS } from './ingestion.types';
 import { ConfigService } from 'src/config/config.service';
 
 @Injectable()
-export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
+export class MqttIngestorService
+  implements OnModuleInit, OnModuleDestroy, OnApplicationShutdown
+{
   private readonly logger = new Logger(MqttIngestorService.name);
   private connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
   private reconnectionAttempt = 0;
   private reconnectionTimer: NodeJS.Timeout | null = null;
+  private readonly messageSubject = new Subject<CanonicalEvent>();
+  private readonly messageObservable: Observable<CanonicalEvent>;
 
   constructor(
     private readonly mqttClientService: MqttClientService,
     private readonly reconnectionStrategy: ExponentialBackoffReconnectionStrategy,
     private readonly schemaRegistry: IngestionSchemaRegistry,
     private readonly canonicalEventFactory: CanonicalEventFactory,
-    private readonly config: ConfigService
-  ) {}
+    private readonly config: ConfigService,
+  ) {
+    this.messageObservable = this.messageSubject.asObservable().pipe(share());
+  }
 
   async onModuleInit(): Promise<void> {
     this.logger.log('Initializing MqttIngestorService');
@@ -36,6 +44,13 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     this.logger.log('Destroying MqttIngestorService');
     this.clearReconnectionTimer();
+    this.messageSubject.complete();
+    await this.disconnect();
+  }
+
+  async onApplicationShutdown(): Promise<void> {
+    this.logger.log('Application shutdown, cleaning up MQTT resources');
+    this.messageSubject.complete();
     await this.disconnect();
   }
 
@@ -77,9 +92,7 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
 
   private scheduleReconnection(error?: Error): void {
     if (
-      !this.reconnectionStrategy.shouldReconnect(
-        this.reconnectionAttempt
-      )
+      !this.reconnectionStrategy.shouldReconnect(this.reconnectionAttempt)
     ) {
       this.logger.error(
         'Max reconnection attempts reached. Connection failed.',
@@ -91,11 +104,7 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
 
     const delay = this.reconnectionStrategy.getDelay(this.reconnectionAttempt);
     this.logger.log(
-      'Scheduling reconnection attempt ' +
-        (this.reconnectionAttempt + 1) +
-        ' in ' +
-        delay +
-        'ms',
+      `Scheduling reconnection attempt ${this.reconnectionAttempt + 1} in ${delay}ms`,
     );
 
     this.reconnectionTimer = setTimeout(async () => {
@@ -107,7 +116,7 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
         this.reconnectionAttempt = 0;
       } catch (reconnectError) {
         this.logger.error(
-          'Reconnection attempt ' + this.reconnectionAttempt + ' failed',
+          `Reconnection attempt ${this.reconnectionAttempt} failed`,
           reconnectError,
         );
         this.connectionStatus = ConnectionStatus.RECONNECTING;
@@ -116,12 +125,16 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
     }, delay);
   }
 
-  async subscribe(topic: string, qos: QoS = 0, schema?: string): Promise<void> {
+  async subscribe(
+    topic: string,
+    qos: QoS = 0,
+    schema?: string,
+  ): Promise<void> {
     try {
       await this.mqttClientService.subscribe(topic, qos);
-      this.logger.log('Subscribed to topic ' + topic + ' with QoS ' + qos);
+      this.logger.log(`Subscribed to topic ${topic} with QoS ${qos}`);
     } catch (error) {
-      this.logger.error('Failed to subscribe to topic ' + topic, error);
+      this.logger.error(`Failed to subscribe to topic ${topic}`, error);
       throw error;
     }
   }
@@ -129,9 +142,9 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
   async unsubscribe(topic: string): Promise<void> {
     try {
       await this.mqttClientService.unsubscribe(topic);
-      this.logger.log('Unsubscribed from topic ' + topic);
+      this.logger.log(`Unsubscribed from topic ${topic}`);
     } catch (error) {
-      this.logger.error('Failed to unsubscribe from topic ' + topic, error);
+      this.logger.error(`Failed to unsubscribe from topic ${topic}`, error);
       throw error;
     }
   }
@@ -145,14 +158,53 @@ export class MqttIngestorService implements OnModuleInit, OnModuleDestroy {
           payload,
           schema,
         );
-       
+
+        this.messageSubject.next(event);
       } catch (error) {
         this.logger.error(
-          'Failed to process message from topic ' + topic,
+          `Failed to process message from topic ${topic}`,
           error,
         );
       }
     });
+  }
+
+  /**
+   * Возвращает реактивный поток всех MQTT сообщений в виде CanonicalEvent
+   * Другие сервисы могут подписываться на этот поток для обработки сообщений
+   *
+   * @example
+   * // В другом сервисе:
+   * constructor(private mqttIngestor: MqttIngestorService) {
+   *   this.mqttIngestor.getMessageStream()
+   *     .pipe(filter(event => event.topic?.startsWith('cnc/')))
+   *     .subscribe(event => this.handleCncEvent(event));
+   * }
+   */
+  getMessageStream(): Observable<CanonicalEvent> {
+    return this.messageObservable;
+  }
+
+  /**
+   * Возвращает отфильтрованный поток сообщений по указанному топику (поддерживает wildcard)
+   *
+   * @param topicPattern - Шаблон топика (например, 'cnc/+/status' или 'cnc/device1/#')
+   * @example
+   * // Подписка на все статусы CNC устройств:
+   * mqttIngestor.getMessageStreamByTopic('cnc/+/status')
+   *   .subscribe(event => console.log('CNC Status:', event.payload));
+   */
+  getMessageStreamByTopic(topicPattern: string): Observable<CanonicalEvent> {
+    const regexPattern = topicPattern
+      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/#/g, '.*')
+      .replace(/\+/g, '[^/]+');
+
+    const topicRegex = new RegExp(`^${regexPattern}$`);
+
+    return this.messageObservable.pipe(
+      filter((event) => !!event.topic && topicRegex.test(event.topic)),
+    );
   }
 
   getConnectionStatus(): ConnectionStatus {
