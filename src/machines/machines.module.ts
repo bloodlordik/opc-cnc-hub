@@ -14,5 +14,6 @@ import { MessageSchema } from './entities/message-schema.entity';
   ],
   controllers: [MachinesController, MessageSchemasController, MachineTypesController],
   providers: [MachinesService],
+  exports: [MachinesService],
 })
 export class MachinesModule {}

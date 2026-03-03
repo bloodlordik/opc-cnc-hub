@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { MachinesModule } from './machines/machines.module';
+import { MqttDispatcherModule } from './machines/mqtt-dispatcher.module';
 import { OpcServerModule } from './opc-server/opc-server.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from './config/config.service';
@@ -14,6 +15,7 @@ import { ConfigService } from './config/config.service';
     OpcServerModule,
     IngestionModule,
     MachinesModule,
+    MqttDispatcherModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
