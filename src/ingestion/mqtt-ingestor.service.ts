@@ -9,10 +9,10 @@ import { Subject, Observable, filter, share } from 'rxjs';
 import { ConnectionStatus, CanonicalEvent } from './ingestion.types';
 import { MqttClientService } from './mqtt-client.service';
 import { ExponentialBackoffReconnectionStrategy } from './exponential-backoff-reconnection-strategy.service';
-import { IngestionSchemaRegistry } from './schema-registry.service';
 import { CanonicalEventFactory } from './canonical-event-factory.service';
 import type { QoS } from './ingestion.types';
 import { ConfigService } from 'src/config/config.service';
+import { MessageSchemaRegistryService } from './message-schema-registry.service';
 
 @Injectable()
 export class MqttIngestorService
@@ -28,7 +28,7 @@ export class MqttIngestorService
   constructor(
     private readonly mqttClientService: MqttClientService,
     private readonly reconnectionStrategy: ExponentialBackoffReconnectionStrategy,
-    private readonly schemaRegistry: IngestionSchemaRegistry,
+    private readonly schemaRegistry: MessageSchemaRegistryService,
     private readonly canonicalEventFactory: CanonicalEventFactory,
     private readonly config: ConfigService,
   ) {
@@ -152,11 +152,9 @@ export class MqttIngestorService
   private setupMessageHandler(): void {
     this.mqttClientService.onMessage(async (topic, payload) => {
       try {
-        const schema = this.schemaRegistry.get(topic);
         const event = this.canonicalEventFactory.createFromMqtt(
           topic,
           payload,
-          schema,
         );
 
         this.messageSubject.next(event);

@@ -5,10 +5,15 @@ import {
   EventMetadata,
   MessageSchema,
 } from './ingestion.types';
+import { MessageSchemaRegistryService } from './message-schema-registry.service';
 
 @Injectable()
 export class CanonicalEventFactory {
   private readonly logger = new Logger(CanonicalEventFactory.name);
+
+  constructor(
+    private readonly schemaRegistry: MessageSchemaRegistryService,
+  ) {}
 
   generateEventId(): string {
     return randomUUID();
@@ -33,23 +38,23 @@ export class CanonicalEventFactory {
       );
     }
 
-    if (schema) {
-      try {
-        parsedPayload = schema.schema.parse(parsedPayload) as Record<
-          string,
-          unknown
-        >;
+    // Используем новый сервис для валидации, если схема не передана явно
+    const validationResult = this.schemaRegistry.validate(topic, parsedPayload);
+
+    if (validationResult.success) {
+      parsedPayload = validationResult.data as Record<string, unknown>;
+      if (validationResult.data) {
         this.logger.debug(
           `Message validated against schema for topic ${topic}`,
         );
-      } catch (error) {
-        this.logger.error(`Schema validation failed for topic ${topic}`, error);
-        throw new Error(
-          `Schema validation failed for topic ${topic}: ${error instanceof Error ? error.message : String(error)}`,
-        );
       }
-    } else {
-      this.logger.warn(`No schema registered for topic ${topic}`);
+    } else if (validationResult.error) {
+      this.logger.error(
+        `Schema validation failed for topic ${topic}: ${validationResult.error.issues.map((e) => e.message).join(', ')}`,
+      );
+      throw new Error(
+        `Schema validation failed for topic ${topic}: ${validationResult.error.issues.map((e) => e.message).join(', ')}`,
+      );
     }
 
     const metadata: EventMetadata = {
@@ -59,8 +64,9 @@ export class CanonicalEventFactory {
       receivedAt: new Date().toISOString(),
     };
 
-    if (schema) {
-      metadata.schemaVersion = schema.version;
+    const registeredSchema = this.schemaRegistry.get(topic);
+    if (registeredSchema) {
+      metadata.schemaVersion = registeredSchema.version;
     }
 
     return {
@@ -71,5 +77,16 @@ export class CanonicalEventFactory {
       timestamp: new Date(),
       metadata,
     };
+  }
+
+  /**
+   * Создание события с явной валидацией по схеме
+   */
+  createFromMqttWithSchema<T extends Record<string, unknown>>(
+    topic: string,
+    payload: Buffer,
+  ): CanonicalEvent & { payload: T } {
+    const baseEvent = this.createFromMqtt(topic, payload);
+    return baseEvent as CanonicalEvent & { payload: T };
   }
 }

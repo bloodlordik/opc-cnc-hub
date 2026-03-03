@@ -8,17 +8,19 @@ import { MqttIngestorService } from './mqtt-ingestor.service';
 import { ApiIngestorService } from './api-ingestor.service';
 import { IngestionController } from './ingestion.controller';
 import { ExponentialBackoffReconnectionStrategy } from './exponential-backoff-reconnection-strategy.service';
+import { MessageSchemaRegistryService } from './message-schema-registry.service';
 
 @Module({
   imports: [ConfigModule],
   controllers: [IngestionController],
-  providers: [    
+  providers: [
     MqttClientService,
     ExponentialBackoffReconnectionStrategy,
     IngestionSchemaRegistry,
     CanonicalEventFactory,
     MqttIngestorService,
     ApiIngestorService,
+    MessageSchemaRegistryService,
   ],
   exports: [
     MqttClientService,
@@ -26,6 +28,7 @@ import { ExponentialBackoffReconnectionStrategy } from './exponential-backoff-re
     CanonicalEventFactory,
     MqttIngestorService,
     ApiIngestorService,
+    MessageSchemaRegistryService,
   ],
 })
 export class IngestionModule {}
