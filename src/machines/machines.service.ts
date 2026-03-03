@@ -24,8 +24,15 @@ export class MachinesService {
 
     // ==================== Machine CRUD ====================
 
-    createMachine(createMachineDto: CreateMachineDto) {
-        const machine = this.machineRepository.create(createMachineDto);
+    async createMachine(createMachineDto: CreateMachineDto) {
+        const machine = this.machineRepository.create({
+            name: createMachineDto.name,
+            alias: createMachineDto.alias,
+            description: createMachineDto.description,
+            mqttSource: createMachineDto.mqttSource,
+            messageSchemaId: createMachineDto.messageSchemaId ?? null,
+            machineTypeId: createMachineDto.machineTypeId ?? null,
+        });
         return this.machineRepository.save(machine);
     }
 
@@ -49,7 +56,21 @@ export class MachinesService {
         if (!machine) {
             throw new NotFoundException(`Machine with ID ${id} not found`);
         }
-        Object.assign(machine, updateMachineDto);
+
+        // Обновляем поля
+        Object.assign(machine, {
+            name: updateMachineDto.name ?? machine.name,
+            alias: updateMachineDto.alias ?? machine.alias,
+            description: updateMachineDto.description ?? machine.description,
+            mqttSource: updateMachineDto.mqttSource ?? machine.mqttSource,
+            messageSchemaId: updateMachineDto.messageSchemaId !== undefined
+                ? updateMachineDto.messageSchemaId
+                : machine.messageSchemaId,
+            machineTypeId: updateMachineDto.machineTypeId !== undefined
+                ? updateMachineDto.machineTypeId
+                : machine.machineTypeId,
+        });
+
         return this.machineRepository.save(machine);
     }
 

@@ -1,5 +1,5 @@
 
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn, VersionColumn } from 'typeorm';
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn, VersionColumn } from 'typeorm';
 import { MessageSchema } from './message-schema.entity';
 import { MachineType } from './machine-type.entity';
 
@@ -23,8 +23,14 @@ export class Machine {
     version: number;
     @Column('text')
     mqttSource: string | null;
-    @ManyToOne(() => MessageSchema, (messageSchema) => messageSchema.machines)
-    messageSchema: MessageSchema;
-    @ManyToOne(() => MachineType, (machineType) => machineType.machines)
-    machineType: MachineType;
+    @Column('integer', { nullable: true })
+    messageSchemaId: number | null;
+    @Column('integer', { nullable: true })
+    machineTypeId: number | null;
+    @ManyToOne(() => MessageSchema, (messageSchema) => messageSchema.machines, { nullable: true })
+    @JoinColumn({ name: 'messageSchemaId' })
+    messageSchema: MessageSchema | null;
+    @ManyToOne(() => MachineType, (machineType) => machineType.machines, { nullable: true })
+    @JoinColumn({ name: 'machineTypeId' })
+    machineType: MachineType | null;
 }
